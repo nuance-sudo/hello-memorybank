@@ -4,7 +4,9 @@ Step 2: メモリの取得（記事 3-2 に対応）
 記事の「3-2. メモリの取得（RetrieveMemories）」セクション（(1)〜(4)）を
 実際のコードで体験するハンズオンスクリプト。
 
+  (0) 準備: 別スコープ（user_999）のメモリを作成
   (1) 3つの取得メソッドの使い分け（Retrieve / Get / List）
+      + List vs Retrieve のスコープの違いを確認
   (2) スコープの「完全一致」制約の確認
   (3) 2種類のフィルタリング（メタデータ / システムフィールド / 複合）
   (4) セマンティック検索（類似性検索）
@@ -31,6 +33,40 @@ print(f"   Agent Engine: {AGENT_ENGINE_NAME}")
 SCOPE = {"user_id": "user_123", "system_id": "order_management"}
 
 # ============================================================
+# (0) 準備: 別スコープ（user_999）のメモリを作成
+# ============================================================
+# List と Retrieve のスコープの違いを確認するために、
+# user_123 とは異なるスコープのメモリを作成しておく。
+print("\n" + "=" * 60)
+print("(0) 準備: 別スコープ（user_999）のメモリを作成")
+print("=" * 60)
+
+SCOPE_999 = {"user_id": "user_999", "system_id": "order_management"}
+print(f"\n   user_123 のスコープ: {SCOPE}")
+print(f"   user_999 のスコープ: {SCOPE_999}")
+
+create_op_1 = client.agent_engines.memories.create(
+    name=AGENT_ENGINE_NAME,
+    fact="B5用紙の発注先はD社です",
+    scope=SCOPE_999,
+)
+print(f"\n   ✅ 作成: {create_op_1.response.fact}")
+
+create_op_2 = client.agent_engines.memories.create(
+    name=AGENT_ENGINE_NAME,
+    fact="納品先は3階の倉庫です",
+    scope=SCOPE_999,
+)
+print(f"   ✅ 作成: {create_op_2.response.fact}")
+
+# 後でクリーンアップするために name を保持
+user_999_memory_names: list[str] = [
+    create_op_1.response.name,
+    create_op_2.response.name,
+]
+print(f"\n   user_999 のメモリを {len(user_999_memory_names)} 件作成完了")
+
+# ============================================================
 # (1) 3つの取得メソッドの使い分け（記事 3-2 (1) 参照）
 # ============================================================
 # | メソッド   | スコープ指定 | 主な用途                        |
@@ -50,7 +86,7 @@ results = client.agent_engines.memories.retrieve(
 )
 all_memories = list(results)
 
-print(f"   取得件数: {len(all_memories)}")
+print(f"   取得件数: {len(all_memories)}（scope={SCOPE} に一致するもののみ）")
 for i, m in enumerate(all_memories, 1):
     print(f"\n  [{i}] fact: {m.memory.fact}")
     print(f"      scope: {m.memory.scope}")
@@ -78,8 +114,6 @@ else:
 
 # --- (1)-c: List（Agent Engine 内の全メモリを一覧取得）---
 print("\n--- (1)-c: List（Agent Engine 内の全メモリを一覧取得）---")
-# 記事にある通り、デバッグ用途に重宝するメソッド。
-# スコープ不要で全ユーザーの記憶が取得できる。
 pager = client.agent_engines.memories.list(name=AGENT_ENGINE_NAME)
 listed_memories = list(pager)
 print(f"   Agent Engine 内の全メモリ数: {len(listed_memories)}")
@@ -89,61 +123,13 @@ for i, m in enumerate(listed_memories, 1):
     if m.metadata:
         print(f"      metadata: {m.metadata}")
 
-# ============================================================
-# (2) スコープの「完全一致」制約の確認（記事 3-2 (2) 参照）
-# ============================================================
-# Retrieve を使う際、スコープは「完全一致」でなければならない。
-# 存在しないスコープを指定すると 0 件が返る。
-# List と Retrieve のスコープの扱いの違いを体験する。
-print("\n" + "=" * 60)
-print("(2) スコープの「完全一致」制約の確認（記事 3-2 (2)）")
-print("=" * 60)
+# --- (1)-d: List vs Retrieve の結果の違い ---
+print("\n--- (1)-d: List vs Retrieve の結果の違い ---")
 
-# --- (2)-準備: user_999 のメモリを作成 ---
-# List vs Retrieve の違いを明確にするために、
-# 別スコープ（user_999）のメモリを作成する。
-SCOPE_999 = {"user_id": "user_999", "system_id": "order_management"}
-
-print("\n--- (2)-準備: 別スコープ（user_999）のメモリを作成 ---")
-print(f"   scope: {SCOPE_999}")
-
-create_op_1 = client.agent_engines.memories.create(
-    name=AGENT_ENGINE_NAME,
-    fact="B5用紙の発注先はD社です",
-    scope=SCOPE_999,
-)
-print(f"   ✅ 作成: {create_op_1.response.fact}")
-
-create_op_2 = client.agent_engines.memories.create(
-    name=AGENT_ENGINE_NAME,
-    fact="納品先は3階の倉庫です",
-    scope=SCOPE_999,
-)
-print(f"   ✅ 作成: {create_op_2.response.fact}")
-
-# 後でクリーンアップするために name を保持
-user_999_memory_names: list[str] = [
-    create_op_1.response.name,
-    create_op_2.response.name,
-]
-
-# --- (2)-a: List vs Retrieve のスコープの違い ---
-# List はスコープに関係なく全メモリを返すが、
-# Retrieve はスコープが完全一致したメモリのみを返す。
-print("\n--- (2)-a: List vs Retrieve のスコープの違い ---")
-
-# List: スコープ不要で全件取得
-pager_all = client.agent_engines.memories.list(name=AGENT_ENGINE_NAME)
-list_all_memories = list(pager_all)
-list_count: int = len(list_all_memories)
+list_count: int = len(listed_memories)
 
 # Retrieve: user_123 のスコープ完全一致のみ
-results_scoped = client.agent_engines.memories.retrieve(
-    name=AGENT_ENGINE_NAME,
-    scope=SCOPE,
-)
-retrieve_123_memories = list(results_scoped)
-retrieve_123_count: int = len(retrieve_123_memories)
+retrieve_123_count: int = len(all_memories)
 
 # Retrieve: user_999 のスコープ完全一致のみ
 results_999 = client.agent_engines.memories.retrieve(
@@ -156,12 +142,21 @@ retrieve_999_count: int = len(retrieve_999_memories)
 print(f"   list()              → {list_count} 件（全スコープのメモリ）")
 print(f"   retrieve(user_123)  → {retrieve_123_count} 件")
 print(f"   retrieve(user_999)  → {retrieve_999_count} 件")
-print(f"   → list() = retrieve(user_123) + retrieve(user_999) = {retrieve_123_count + retrieve_999_count} 件")
-print(f"\n   💡 List はスコープの壁を越えて全件を返すが、")
-print(f"      Retrieve はスコープが完全一致しないと1件も返さない")
+print(f"\n   💡 List はスコープに関係なく Agent Engine 内の全メモリを返す")
+print(f"      Retrieve はスコープが完全一致するメモリのみを返す")
+print(f"      → List はデバッグ用途、Retrieve はアプリケーション用途")
 
-# --- (2)-b: 複合キーの部分一致では取得できないことの確認 ---
-print("\n--- (2)-b: 複合キーの部分一致は不可 ---")
+# ============================================================
+# (2) スコープの「完全一致」制約の確認（記事 3-2 (2) 参照）
+# ============================================================
+# Retrieve を使う際、スコープは「完全一致」でなければならない。
+# 複合キーの一部だけでは取得できない。
+print("\n" + "=" * 60)
+print("(2) スコープの「完全一致」制約の確認（記事 3-2 (2)）")
+print("=" * 60)
+
+# --- (2)-a: 複合キーの部分一致では取得できないことの確認 ---
+print("\n--- (2)-a: 複合キーの部分一致は不可 ---")
 # user_id だけでは取得できない（system_id が不足）
 results_partial = client.agent_engines.memories.retrieve(
     name=AGENT_ENGINE_NAME,
@@ -171,8 +166,8 @@ partial_memories = list(results_partial)
 print(f"   retrieve(user_id のみ) → {len(partial_memories)} 件")
 print(f"   → system_id を含めた完全一致でないと取得できない")
 
-# --- (2)-c: 対比まとめ ---
-print("\n--- (2)-c: 対比まとめ ---")
+# --- (2)-b: 対比まとめ ---
+print("\n--- (2)-b: 対比まとめ ---")
 print(f"   list()                → {list_count} 件（スコープ不要、全件）")
 print(f"   retrieve(user_123)    → {retrieve_123_count} 件（完全一致）")
 print(f"   retrieve(user_999)    → {retrieve_999_count} 件（完全一致）")
@@ -182,13 +177,6 @@ print(f"\n   💡 記事のアンチパターン:")
 print(f'      保存時: scope={{"user_id": "user_123", "project_id": "project_A"}}')
 print(f'      取得時: scope={{"user_id": "user_123"}} だけでは取得できない')
 print(f"      → 横断検索したい属性はスコープではなくメタデータに持たせるべき")
-
-# --- (2)-クリーンアップ: user_999 のメモリを削除 ---
-print("\n--- (2)-クリーンアップ: user_999 のメモリを削除 ---")
-for mem_name in user_999_memory_names:
-    client.agent_engines.memories.delete(name=mem_name)
-    print(f"   🗑️ 削除: {mem_name}")
-print(f"   ✅ user_999 のメモリを {len(user_999_memory_names)} 件削除完了")
 
 # ============================================================
 # (3) 2種類のフィルタリング（記事 3-2 (3) 参照）
@@ -441,9 +429,20 @@ print(f"""
 """)
 
 # ============================================================
-# まとめ
+# クリーンアップ: user_999 のメモリを削除
 # ============================================================
 print("=" * 60)
+print("🧹 クリーンアップ: user_999 のメモリを削除")
+print("=" * 60)
+for mem_name in user_999_memory_names:
+    client.agent_engines.memories.delete(name=mem_name)
+    print(f"   🗑️ 削除: {mem_name}")
+print(f"   ✅ user_999 のメモリを {len(user_999_memory_names)} 件削除完了")
+
+# ============================================================
+# まとめ
+# ============================================================
+print("\n" + "=" * 60)
 print("📊 まとめ")
 print("=" * 60)
 print(f"""
