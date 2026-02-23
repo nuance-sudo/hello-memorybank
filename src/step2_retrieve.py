@@ -99,14 +99,42 @@ print("\n" + "=" * 60)
 print("(2) スコープの「完全一致」制約の確認（記事 3-2 (2)）")
 print("=" * 60)
 
+# --- (2)-0: List vs Retrieve のスコープの違い ---
+# List はスコープに関係なく全メモリを返すが、
+# Retrieve はスコープが完全一致したメモリのみを返す。
+print("\n--- (2)-0: List vs Retrieve のスコープの違い ---")
+
+# List: スコープ不要で全件取得
+pager_all = client.agent_engines.memories.list(name=AGENT_ENGINE_NAME)
+list_all_memories = list(pager_all)
+list_count: int = len(list_all_memories)
+
+# Retrieve: スコープ完全一致のもののみ取得
+results_scoped = client.agent_engines.memories.retrieve(
+    name=AGENT_ENGINE_NAME,
+    scope=SCOPE,
+)
+retrieve_memories = list(results_scoped)
+retrieve_count: int = len(retrieve_memories)
+
+print(f"   list()     → {list_count} 件（Agent Engine 内の全メモリ）")
+print(f"   retrieve() → {retrieve_count} 件（scope={SCOPE} に一致するもののみ）")
+if list_count > retrieve_count:
+    print(f"   → list() のほうが {list_count - retrieve_count} 件多い")
+    print(f"      = 他のスコープに属するメモリが存在する")
+elif list_count == retrieve_count:
+    print(f"   → 件数が一致 = 現在は全メモリが同一スコープに属している")
+print(f"\n   💡 List はスコープの壁を越えて全件を返すが、")
+print(f"      Retrieve はスコープが完全一致しないと1件も返さない")
+
 # --- (2)-a: 存在しない user_id で取得（0件になるはず）---
-print("\n--- (2)-a: 存在しない user_id で取得 ---")
+print("\n--- (2)-a: 存在しない user_id で Retrieve ---")
 results_other = client.agent_engines.memories.retrieve(
     name=AGENT_ENGINE_NAME,
     scope={"user_id": "user_999", "system_id": "order_management"},
 )
 other_memories = list(results_other)
-print(f"   user_999 のメモリ件数: {len(other_memories)}")
+print(f"   retrieve(user_999) → {len(other_memories)} 件")
 print(f"   → user_123 のメモリは見えない（スコープで分離されている）")
 
 # --- (2)-b: 複合キーの部分一致では取得できないことの確認 ---
@@ -117,8 +145,14 @@ results_partial = client.agent_engines.memories.retrieve(
     scope={"user_id": "user_123"},  # system_id なし
 )
 partial_memories = list(results_partial)
-print(f"   user_id のみ指定: {len(partial_memories)} 件")
+print(f"   retrieve(user_id のみ) → {len(partial_memories)} 件")
 print(f"   → system_id を含めた完全一致でないと取得できない")
+
+# --- (2)-c: List は部分一致でも影響なし ---
+print("\n--- (2)-c: 対比 — List はスコープに依存しない ---")
+print(f"   list() → 常に {list_count} 件（スコープの指定自体が不要）")
+print(f"   retrieve(user_999)   → {len(other_memories)} 件")
+print(f"   retrieve(user_id のみ) → {len(partial_memories)} 件")
 
 print(f"\n   💡 記事のアンチパターン:")
 print(f'      保存時: scope={{"user_id": "user_123", "project_id": "project_A"}}')
