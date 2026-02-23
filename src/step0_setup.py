@@ -25,16 +25,22 @@ client = vertexai.Client(project=PROJECT_ID, location=LOCATION)
 print(f"✅ Client 初期化完了: project={PROJECT_ID}, location={LOCATION}")
 
 # ============================================================
-# 2. Agent Engine インスタンス作成
+# 2. Agent Engine インスタンス作成（既存がある場合はスキップ）
 # ============================================================
 # config なしで作ると Memory Bank のデフォルト設定で作成される。
 # embedding モデルのデフォルトは text-embedding-005（英語最適化）。
-print("\n📦 Agent Engine インスタンスを作成中...")
-agent_engine = client.agent_engines.create()
+existing_name = os.environ.get("AGENT_ENGINE_NAME")
 
-agent_engine_name = agent_engine.api_resource.name
-print(f"✅ 作成完了!")
-print(f"   リソース名: {agent_engine_name}")
+if existing_name:
+    agent_engine_name = existing_name
+    print(f"\n✅ 既存の Agent Engine を使用（作成スキップ）")
+    print(f"   リソース名: {agent_engine_name}")
+else:
+    print("\n📦 Agent Engine インスタンスを作成中...")
+    agent_engine = client.agent_engines.create()
+    agent_engine_name = agent_engine.api_resource.name
+    print(f"✅ 作成完了!")
+    print(f"   リソース名: {agent_engine_name}")
 
 # ============================================================
 # 3. Embedding モデル + メモリトピックを設定
@@ -68,11 +74,11 @@ client.agent_engines.update(
                         {"managed_memory_topic": {"managed_topic_enum": "USER_PREFERENCES"}},
                         {"managed_memory_topic": {"managed_topic_enum": "KEY_CONVERSATION_DETAILS"}},
                         {"managed_memory_topic": {"managed_topic_enum": "EXPLICIT_INSTRUCTIONS"}},
-                        # カスタムトピック: 技術スキルに特化
+                        # カスタムトピック: 発注ルール・社内規定
                         {
                             "custom_memory_topic": {
-                                "label": "technical_skills",
-                                "description": "ユーザーが使用しているプログラミング言語、フレームワーク、ツール、技術スタック。具体的な技術名とその習熟度や使用状況を記録する。"
+                                "label": "ordering_rules",
+                                "description": "発注に関するルール、承認フロー、締め日、予算上限、取引先の選定基準など、社内の発注業務に関する規定や慣習。"
                             }
                         },
                     ]
@@ -83,7 +89,7 @@ client.agent_engines.update(
 )
 print(f"✅ 設定完了")
 print(f"   embedding: text-multilingual-embedding-002")
-print(f"   トピック: マネージド4つ + カスタム（technical_skills）")
+print(f"   トピック: マネージド4つ + カスタム（ordering_rules）")
 
 # ============================================================
 # 4. 設定確認
