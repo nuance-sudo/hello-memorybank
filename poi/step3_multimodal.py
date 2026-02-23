@@ -1,12 +1,13 @@
 """
-Step 3: マルチモーダル入力からメモリを生成
+Step 3（補足）: マルチモーダル入力からメモリを生成（詳細版）
 
-画像・動画・音声を含むイベントからメモリを生成する。
-Memory Bank は画像を分析し、テキストとしてメモリを保存する（画像自体は保存されない）。
+記事 3-1 ⑧ のマルチモーダル入力の詳細を体験するスクリプト。
+step1_generate.py では GCS 画像の簡易例のみ扱っているが、
+ここではより多くの入力方法を網羅的に確認する。
 
   1. GCS の画像 URL からメモリ生成（file_data）
   2. ローカル画像からメモリ生成（inline_data）
-  3. テキスト + 画像の組み合わせ
+  3. テキスト + 画像の組み合わせ（Sessions 連携）
   4. 生成されたメモリの確認
   5. クリーンアップ
 
@@ -39,15 +40,10 @@ SCOPE = {"user_id": USER_ID}
 # ============================================================
 # 1. GCS の画像からメモリ生成（file_data）
 # ============================================================
-# GCS のパブリック画像を file_data で参照する。
-# 画像の内容を LLM が分析し、テキストのメモリとして保存する。
-# テキストで「これは〇〇です」とコンテキストを添えると、
-# より意味のあるメモリが生成される。
 print("\n" + "=" * 60)
 print("🖼️  1. GCS の画像からメモリ生成（file_data）")
 print("=" * 60)
 
-# Google Cloud のサンプル画像を使用
 GCS_IMAGE_URI = "gs://cloud-samples-data/generative-ai/image/scones.jpg"
 
 op1 = client.agent_engines.memories.generate(
@@ -85,13 +81,10 @@ else:
 # ============================================================
 # 2. ローカル画像からメモリ生成（inline_data）
 # ============================================================
-# ローカルファイルのバイナリを inline_data で渡す。
-# ここではサンプル画像をダウンロードして使用する。
 print("\n" + "=" * 60)
 print("📷 2. ローカル画像からメモリ生成（inline_data）")
 print("=" * 60)
 
-# Section 1 で使った GCS 画像を HTTPS 経由でダウンロード
 SAMPLE_IMAGE_URL = "https://storage.googleapis.com/cloud-samples-data/generative-ai/image/scones.jpg"
 LOCAL_IMAGE_PATH = "/tmp/sample_scones.jpg"
 
@@ -139,8 +132,6 @@ else:
 # ============================================================
 # 3. Sessions + マルチモーダル
 # ============================================================
-# Sessions 経由でもマルチモーダルイベントを記録できる。
-# Sessions のイベントに画像を含めて、そこからメモリを生成する。
 print("\n" + "=" * 60)
 print("📡 3. Sessions + マルチモーダル")
 print("=" * 60)
@@ -152,7 +143,6 @@ session = client.agent_engines.sessions.create(
 session_name: str = session.response.name
 print(f"   セッション作成: {session_name}")
 
-# テキスト + 画像のイベントを追加
 client.agent_engines.sessions.events.append(
     name=session_name,
     author="user",
@@ -236,9 +226,8 @@ purge_op = client.agent_engines.memories.purge(
 count: int = purge_op.response.purge_count
 print(f"   ✅ {count} 件削除")
 
-# ローカル画像も削除
 if os.path.exists(LOCAL_IMAGE_PATH):
     os.remove(LOCAL_IMAGE_PATH)
     print(f"   ✅ ローカル画像削除: {LOCAL_IMAGE_PATH}")
 
-print(f"\n🎉 Step 3 完了！")
+print(f"\n🎉 マルチモーダルの詳細ハンズオン完了！")
