@@ -2,13 +2,15 @@
 
 Vertex AI Agent Engine **Memory Bank** のハンズオン学習リポジトリ。
 
+📝 **Zenn 記事**: [Vertex AI Agent Engine Memory Bank 入門](https://zenn.dev/esanuka/articles/hello-memorybank)
+
 ## プロジェクト構成
 
 ```
 .
 ├── src/          # ステップごとの実行スクリプト
 ├── doc/          # 各ステップの解説（Insight）
-├── poi/          # 補足スクリプト（削除・リビジョン）
+├── poi/          # 補足スクリプト（マルチモーダル詳細・削除・リビジョン）
 ├── .env          # 環境変数（GCP_PROJECT_ID 等）
 └── README.md
 ```
@@ -25,17 +27,40 @@ cp .env.example .env
 
 ## 学習ステップ
 
-| Step | テーマ | src | doc | キーワード |
-|------|-------|-----|-----|-----------|
-| 0 | **設定**: Agent Engine 作成 & embedding モデル設定 | [step0](src/step0_setup.py) | [insight](doc/step0_insights.md) | `create()`, `update()`, `context_spec`, multilingual embedding |
-| 1 | **作成**: Sessions 連携でメモリ生成 | [step1](src/step1_generate.py) | [insight](doc/step1_insights.md) | `sessions.create()`, `vertex_session_source`, `generate()`, `create()` |
-| 2 | **取得**: 全件取得 & 類似検索 & フィルタ | [step2](src/step2_retrieve.py) | [insight](doc/step2_insights.md) | `retrieve()`, `similarity_search_params`, `filter`, `filter_groups` |
-| 3 | **マルチモーダル**: 画像からメモリ生成 | [step3](src/step3_multimodal.py) | [insight](doc/step3_insights.md) | `file_data`, `inline_data`, マルチモーダル入力 |
+| Step | テーマ | 記事セクション | src | doc |
+|------|-------|-------------|-----|-----|
+| 0 | **設定**: Agent Engine 作成 & embedding モデル設定 | — | [step0](src/step0_setup.py) | [insight](doc/step0_insights.md) |
+| 1 | **生成**: メモリの生成と保存 | 3-1（①〜⑨） | [step1](src/step1_generate.py) | [insight](doc/step1_insights.md) |
+| 2 | **取得**: メモリの取得 | 3-2（①〜④） | [step2](src/step2_retrieve.py) | [insight](doc/step2_insights.md) |
+
+### Step 1: メモリの生成と保存（記事 3-1）
+
+| セクション | 内容 | キーワード |
+|-----------|------|----------|
+| ① | スコープの定義とセッション作成 | `sessions.create()`, `user_id`, 複合キー |
+| ② | トピック（Topics）の動作確認 | マネージドトピック, カスタムトピック |
+| ③ | 生成されるメモリのデータ構造 | `fact`, `scope`, `metadata`, `topics` |
+| ④ | Generate と Create の違い | `generate()`, `create()` |
+| ⑤ | 統合（Consolidation）のデモ | CREATED, UPDATED, DELETED |
+| ⑥ | メタデータの付与 | `config.metadata`, `string_value` |
+| ⑦ | メタデータの更新戦略 | `metadata_merge_strategy`, `REQUIRE_EXACT_MATCH` |
+| ⑧ | マルチモーダル入力 | `file_data`, GCS URI |
+| ⑨ | 非同期生成 | `wait_for_completion=False` |
+
+### Step 2: メモリの取得（記事 3-2）
+
+| セクション | 内容 | キーワード |
+|-----------|------|----------|
+| ① | 3つの取得メソッドの使い分け | `retrieve()`, `get()`, `list()` |
+| ② | スコープの完全一致制約 | 完全一致, アンチパターン |
+| ③ | 2種類のフィルタリング | `filter_groups`(DNF), `filter`(EBNF) |
+| ④ | セマンティック検索 | `similarity_search_params`, `top_k`, distance |
 
 ### 補足（poi/）
 
 | ファイル | テーマ | キーワード |
 |---------|-------|-----------|
+| [step3_multimodal.py](poi/step3_multimodal.py) | マルチモーダル入力の詳細 | `file_data`, `inline_data`, Sessions連携 |
 | [step3_delete.py](poi/step3_delete.py) | メモリの削除 | `delete()`, `purge()` |
 | [step4_lifecycle.py](poi/step4_lifecycle.py) | リビジョン管理 | `rollback()`, `revisions` |
 
